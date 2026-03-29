@@ -35,6 +35,10 @@ type TripState = {
   elevationGain: number;
   /** Last altitude sample in feet (session; not persisted) */
   lastAltitudeFt: number | null;
+  /** Wall-clock ms when current tracking segment started (not persisted) */
+  trackingStartedAt: number | null;
+  /** Completed tracking time in ms (sums each Start→Stop segment until reset) */
+  accumulatedTrackingMs: number;
   toggleTracking: () => void;
   resetTrip: () => void;
   addPoint: (
@@ -52,8 +56,24 @@ export const useTripStore = create<TripState>()(
       distance: 0,
       elevationGain: 0,
       lastAltitudeFt: null,
+      trackingStartedAt: null,
+      accumulatedTrackingMs: 0,
       toggleTracking: () => {
-        set((state) => ({ isTracking: !state.isTracking }));
+        set((state) => {
+          if (!state.isTracking) {
+            return {
+              isTracking: true,
+              trackingStartedAt: Date.now(),
+            };
+          }
+          const start = state.trackingStartedAt;
+          const delta = start ? Date.now() - start : 0;
+          return {
+            isTracking: false,
+            trackingStartedAt: null,
+            accumulatedTrackingMs: state.accumulatedTrackingMs + delta,
+          };
+        });
       },
       resetTrip: () => {
         set({
@@ -62,6 +82,8 @@ export const useTripStore = create<TripState>()(
           distance: 0,
           elevationGain: 0,
           lastAltitudeFt: null,
+          trackingStartedAt: null,
+          accumulatedTrackingMs: 0,
         });
       },
       addPoint: (lng, lat, altitudeMeters) => {
@@ -102,7 +124,17 @@ export const useTripStore = create<TripState>()(
         distance: state.distance,
         isTracking: state.isTracking,
         elevationGain: state.elevationGain,
+        accumulatedTrackingMs: state.accumulatedTrackingMs,
       }),
     }
   )
 );
+
+/** Total trip time in ms: completed segments + active segment (if tracking). */
+export function getTripDurationMs(state: TripState): number {
+  const active =
+    state.isTracking && state.trackingStartedAt
+      ? Date.now() - state.trackingStartedAt
+      : 0;
+  return state.accumulatedTrackingMs + active;
+}

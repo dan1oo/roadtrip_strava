@@ -1,7 +1,7 @@
 "use client";
 
 import { toPng } from "html-to-image";
-import { useMemo, useRef, useState } from "react";
+import { forwardRef, useMemo } from "react";
 
 import { mapboxAccessToken } from "@/src/lib/mapbox";
 import type { LngLat } from "@/src/store/useTripStore";
@@ -77,18 +77,6 @@ function buildMapboxStaticImageUrl(
   return `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/static/-98.5,39.8,3/${STATIC_W}x${STATIC_H}@2x?access_token=${accessToken}`;
 }
 
-/**
- * Scenery score 0–100 from elevation gain (ft) per mile — hillier trips score higher.
- */
-export function computeSceneryScore(
-  elevationGainFt: number,
-  distanceMi: number
-): number {
-  if (distanceMi < 0.01 || elevationGainFt <= 0) return 0;
-  const ftPerMi = elevationGainFt / distanceMi;
-  return Math.min(100, Math.round((ftPerMi / 150) * 100));
-}
-
 function formatMi(n: number): string {
   return n.toLocaleString(undefined, {
     minimumFractionDigits: 1,
@@ -100,52 +88,41 @@ function formatFt(n: number): string {
   return Math.round(n).toLocaleString();
 }
 
-type ShareCardProps = {
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+export type ShareCardProps = {
   distanceMi: number;
   elevationGainFt: number;
+  durationMs: number;
   route: LngLat[];
   className?: string;
 };
 
-export default function ShareCard({
-  distanceMi,
-  elevationGainFt,
-  route,
-  className = "",
-}: ShareCardProps) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<"idle" | "copying" | "error">("idle");
+/**
+ * 9:16 story card for PNG export only — render off-screen and pass to
+ * `captureShareCardAsPng`.
+ */
+const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
+  function ShareCard(
+    { distanceMi, elevationGainFt, durationMs, route, className = "" },
+    ref
+  ) {
+    const mapUrl = useMemo(
+      () => buildMapboxStaticImageUrl(route, mapboxAccessToken),
+      [route]
+    );
 
-  const mapUrl = useMemo(
-    () => buildMapboxStaticImageUrl(route, mapboxAccessToken),
-    [route]
-  );
-
-  const sceneryScore = useMemo(
-    () => computeSceneryScore(elevationGainFt, distanceMi),
-    [elevationGainFt, distanceMi]
-  );
-
-  async function handleSavePng() {
-    if (!cardRef.current) return;
-    setStatus("copying");
-    try {
-      const dataUrl = await captureShareCardAsPng(cardRef.current);
-      const link = document.createElement("a");
-      link.download = `road-strava-trip-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
-      setStatus("idle");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <div className={`space-y-3 ${className}`}>
+    return (
       <div
-        ref={cardRef}
-        className="relative mx-auto w-full max-w-[min(100%,320px)] overflow-hidden rounded-2xl shadow-2xl"
+        ref={ref}
+        className={`relative w-[320px] overflow-hidden rounded-2xl shadow-2xl ${className}`}
         style={{ aspectRatio: "9 / 16" }}
       >
         <div
@@ -155,8 +132,7 @@ export default function ShareCard({
         <div className="relative flex h-full flex-col p-5 text-white">
           <div className="mb-4 overflow-hidden rounded-xl border border-white/10 bg-black/20 shadow-inner ring-1 ring-white/5">
             {mapUrl ? (
-              // Native <img> keeps Mapbox static + html-to-image capture predictable (CORS).
-              /* eslint-disable-next-line @next/next/no-img-element */
+              /* eslint-disable-next-line @next/next/no-img-element -- Mapbox static + html-to-image */
               <img
                 src={mapUrl}
                 alt=""
@@ -172,7 +148,7 @@ export default function ShareCard({
                 <code className="mx-1 rounded bg-white/10 px-1">
                   NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
                 </code>{" "}
-                for a static route map on this card.
+                for a static route map.
               </div>
             )}
           </div>
@@ -180,7 +156,16 @@ export default function ShareCard({
           <div className="flex flex-1 flex-col justify-center gap-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                Total miles
+                Time
+              </p>
+              <p className="text-4xl font-black tabular-nums tracking-tight text-white">
+                {formatDuration(durationMs)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
+                Distance
               </p>
               <p className="text-4xl font-black tabular-nums tracking-tight text-white">
                 {formatMi(distanceMi)}
@@ -192,23 +177,13 @@ export default function ShareCard({
 
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                Elevation gain
+                Elevation
               </p>
               <p className="text-4xl font-black tabular-nums tracking-tight text-white">
                 {formatFt(elevationGainFt)}
                 <span className="ml-2 text-2xl font-bold text-slate-300">
                   ft
                 </span>
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-400">
-                Scenery score
-              </p>
-              <p className="mt-1 text-3xl font-black tabular-nums text-emerald-400">
-                {sceneryScore}
-                <span className="text-lg font-bold text-slate-400"> / 100</span>
               </p>
             </div>
           </div>
@@ -218,20 +193,8 @@ export default function ShareCard({
           </p>
         </div>
       </div>
+    );
+  }
+);
 
-      <button
-        type="button"
-        onClick={handleSavePng}
-        disabled={status === "copying"}
-        className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-emerald-500 disabled:opacity-60"
-      >
-        {status === "copying" ? "Saving…" : "Save story PNG"}
-      </button>
-      {status === "error" ? (
-        <p className="text-center text-xs text-red-500">
-          Could not capture image. Try again after the map loads.
-        </p>
-      ) : null}
-    </div>
-  );
-}
+export default ShareCard;
