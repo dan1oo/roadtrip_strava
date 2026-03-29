@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
-
-const TripMap = dynamic(() => import("@/src/components/TripMap"), {
-  ssr: false,
-});
+import TripMapDynamic from "@/src/components/TripMapDynamic";
 
 export default function Home() {
-  return <TripMap />;
+  return <TripMapDynamic />;
 }
