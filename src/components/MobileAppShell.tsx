@@ -11,7 +11,7 @@ type TabItem = {
 
 const tabs: TabItem[] = [
   { href: "/trip", label: "Track", icon: "TR" },
-  { href: "/planner", label: "Plan", icon: "PL" },
+  { href: "/plan", label: "Plan", icon: "PL" },
 ];
 
 export default function MobileAppShell({

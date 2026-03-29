@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { fetchElevationMeters } from "@/src/lib/elevation";
 import { useTripStore } from "@/src/store/useTripStore";
 
 export function useLocation(): void {
@@ -12,9 +13,14 @@ export function useLocation(): void {
     if (!isTracking || typeof navigator === "undefined") return;
 
     const watchId = navigator.geolocation.watchPosition(
-      (position) => {
+      async (position) => {
         const { longitude, latitude, altitude } = position.coords;
-        addPoint(longitude, latitude, altitude ?? null);
+        const elevationFromApi = await fetchElevationMeters(latitude, longitude);
+        addPoint(
+          longitude,
+          latitude,
+          elevationFromApi ?? altitude ?? null
+        );
       },
       undefined,
       { enableHighAccuracy: true }

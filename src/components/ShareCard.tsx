@@ -38,25 +38,42 @@ function simplifyRoute(route: LngLat[], maxPoints: number): LngLat[] {
 
 function buildMapboxStaticImageUrl(
   route: LngLat[],
+  highlights: LngLat[],
   accessToken: string
 ): string | null {
   if (!accessToken) return null;
 
   if (route.length >= 2) {
     const coords = simplifyRoute(route, MAX_ROUTE_POINTS);
-    const feature = {
-      type: "Feature" as const,
-      properties: {
-        stroke: "#3b82f6",
-        "stroke-width": 5,
-        "stroke-opacity": 1,
-      },
-      geometry: {
-        type: "LineString" as const,
-        coordinates: coords,
-      },
+    const featureCollection = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          properties: {
+            stroke: "#3b82f6",
+            "stroke-width": 5,
+            "stroke-opacity": 1,
+          },
+          geometry: {
+            type: "LineString" as const,
+            coordinates: coords,
+          },
+        },
+        ...highlights.map((point) => ({
+          type: "Feature" as const,
+          properties: {
+            "marker-color": "#f97316",
+            "marker-size": "small",
+          },
+          geometry: {
+            type: "Point" as const,
+            coordinates: point,
+          },
+        })),
+      ],
     };
-    const encoded = encodeURIComponent(JSON.stringify(feature));
+    const encoded = encodeURIComponent(JSON.stringify(featureCollection));
     return `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/static/geojson(${encoded})/auto/${STATIC_W}x${STATIC_H}@2x?padding=80&access_token=${accessToken}`;
   }
 
@@ -102,6 +119,7 @@ export type ShareCardProps = {
   elevationGainFt: number;
   durationMs: number;
   route: LngLat[];
+  highlights: LngLat[];
   className?: string;
 };
 
@@ -111,12 +129,12 @@ export type ShareCardProps = {
  */
 const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
   function ShareCard(
-    { distanceMi, elevationGainFt, durationMs, route, className = "" },
+    { distanceMi, elevationGainFt, durationMs, route, highlights, className = "" },
     ref
   ) {
     const mapUrl = useMemo(
-      () => buildMapboxStaticImageUrl(route, mapboxAccessToken),
-      [route]
+      () => buildMapboxStaticImageUrl(route, highlights, mapboxAccessToken),
+      [route, highlights]
     );
 
     return (

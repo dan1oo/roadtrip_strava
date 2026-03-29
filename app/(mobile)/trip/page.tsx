@@ -28,10 +28,16 @@ export default function TripPage() {
   );
 
   const isTracking = useTripStore((s) => s.isTracking);
+  const tripStatus = useTripStore((s) => s.tripStatus);
   const route = useTripStore((s) => s.route);
+  const highlights = useTripStore((s) => s.highlights);
   const distance = useTripStore((s) => s.distance);
   const elevationGain = useTripStore((s) => s.elevationGain);
-  const toggleTracking = useTripStore((s) => s.toggleTracking);
+  const startTrip = useTripStore((s) => s.startTrip);
+  const pauseTrip = useTripStore((s) => s.pauseTrip);
+  const resumeTrip = useTripStore((s) => s.resumeTrip);
+  const endTrip = useTripStore((s) => s.endTrip);
+  const addHighlight = useTripStore((s) => s.addHighlight);
   const resetTrip = useTripStore((s) => s.resetTrip);
 
   const durationMs = useTripStore((s) => getTripDurationMs(s));
@@ -44,6 +50,13 @@ export default function TripPage() {
 
   const showStats =
     isTracking || route.length > 0 || distance > 0 || elevationGain > 0;
+  const canExport = tripStatus === "ended" && route.length > 0;
+
+  const handleEndTrip = useCallback(() => {
+    if (window.confirm("Do you want to end trip?")) {
+      endTrip();
+    }
+  }, [endTrip]);
 
   const handleExportPng = useCallback(async () => {
     if (!shareCardRef.current) return;
@@ -102,19 +115,69 @@ export default function TripPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-        <button
-          type="button"
-          onClick={toggleTracking}
-          className={`rounded-xl px-4 py-3 text-sm font-semibold ${
-            isTracking
-              ? "bg-red-600 text-white hover:bg-red-500"
-              : "bg-blue-600 text-white hover:bg-blue-500"
-          }`}
-        >
-          {isTracking ? "Stop Trip" : "Start Trip"}
-        </button>
+        {tripStatus === "idle" ? (
+          <button
+            type="button"
+            onClick={startTrip}
+            className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500"
+          >
+            Start Trip
+          </button>
+        ) : null}
 
-        {!isTracking && route.length > 0 ? (
+        {tripStatus === "tracking" ? (
+          <>
+            <button
+              type="button"
+              onClick={pauseTrip}
+              className="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-400"
+            >
+              Pause
+            </button>
+            <button
+              type="button"
+              onClick={addHighlight}
+              className="rounded-xl border border-indigo-300 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+            >
+              Highlight Location
+            </button>
+            <button
+              type="button"
+              onClick={handleEndTrip}
+              className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-500"
+            >
+              Stop Trip
+            </button>
+          </>
+        ) : null}
+
+        {tripStatus === "paused" ? (
+          <>
+            <button
+              type="button"
+              onClick={resumeTrip}
+              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500"
+            >
+              Unpause
+            </button>
+            <button
+              type="button"
+              onClick={addHighlight}
+              className="rounded-xl border border-indigo-300 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+            >
+              Highlight Location
+            </button>
+            <button
+              type="button"
+              onClick={handleEndTrip}
+              className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-500"
+            >
+              End Trip
+            </button>
+          </>
+        ) : null}
+
+        {canExport ? (
           <>
             <button
               type="button"
@@ -123,6 +186,14 @@ export default function TripPage() {
               className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
             >
               {exportStatus === "busy" ? "Exporting…" : "Export story PNG"}
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPng}
+              disabled={exportStatus === "busy"}
+              className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+            >
+              Share
             </button>
             {exportStatus === "error" ? (
               <p className="text-center text-xs text-red-500">
@@ -151,6 +222,7 @@ export default function TripPage() {
           elevationGainFt={elevationGain}
           durationMs={durationMs}
           route={route}
+          highlights={highlights}
         />
       </div>
     </section>
