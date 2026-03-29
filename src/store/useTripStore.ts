@@ -25,22 +25,22 @@ function haversineMiles(a: LngLat, b: LngLat): number {
 
 type TripState = {
   isTracking: boolean;
-  path: LngLat[];
+  route: LngLat[];
   distance: number;
   addPoint: (lng: number, lat: number) => void;
 };
 
 export const useTripStore = create<TripState>((set) => ({
   isTracking: false,
-  path: [],
+  route: [],
   distance: 0,
   addPoint: (lng, lat) => {
     const point: LngLat = [lng, lat];
     set((state) => {
-      const last = state.path[state.path.length - 1];
+      const last = state.route[state.route.length - 1];
       const delta = last ? haversineMiles(last, point) : 0;
       return {
-        path: [...state.path, point],
+        route: [...state.route, point],
         distance: state.distance + delta,
       };
     });
