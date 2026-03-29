@@ -51,6 +51,8 @@ type TripState = {
   endTrip: () => void;
   addHighlight: () => void;
   resetTrip: () => void;
+  /** Clear completed trip and begin tracking immediately (after export, etc.). */
+  startNewTrip: () => void;
   addPoint: (
     lng: number,
     lat: number,
@@ -130,6 +132,20 @@ export const useTripStore = create<TripState>()(
           elevationGain: 0,
           lastAltitudeFt: null,
           trackingStartedAt: null,
+          accumulatedTrackingMs: 0,
+        });
+      },
+      startNewTrip: () => {
+        set({
+          tripStatus: "tracking",
+          isTracking: true,
+          route: [],
+          highlights: [],
+          lastPoint: null,
+          distance: 0,
+          elevationGain: 0,
+          lastAltitudeFt: null,
+          trackingStartedAt: Date.now(),
           accumulatedTrackingMs: 0,
         });
       },
