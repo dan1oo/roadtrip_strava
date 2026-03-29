@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 export type LngLat = [number, number];
 
 const EARTH_RADIUS_MILES = 3958.8;
+const METERS_TO_FEET = 3.28084;
 
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
@@ -30,9 +31,17 @@ type TripState = {
   route: LngLat[];
   /** Total distance in miles */
   distance: number;
+  /** Cumulative elevation gain in feet (from GPS altitude when available) */
+  elevationGain: number;
+  /** Last altitude sample in feet (session; not persisted) */
+  lastAltitudeFt: number | null;
   toggleTracking: () => void;
   resetTrip: () => void;
-  addPoint: (lng: number, lat: number) => void;
+  addPoint: (
+    lng: number,
+    lat: number,
+    altitudeMeters?: number | null
+  ) => void;
 };
 
 export const useTripStore = create<TripState>()(
@@ -41,20 +50,46 @@ export const useTripStore = create<TripState>()(
       isTracking: false,
       route: [],
       distance: 0,
+      elevationGain: 0,
+      lastAltitudeFt: null,
       toggleTracking: () => {
         set((state) => ({ isTracking: !state.isTracking }));
       },
       resetTrip: () => {
-        set({ isTracking: false, route: [], distance: 0 });
+        set({
+          isTracking: false,
+          route: [],
+          distance: 0,
+          elevationGain: 0,
+          lastAltitudeFt: null,
+        });
       },
-      addPoint: (lng, lat) => {
+      addPoint: (lng, lat, altitudeMeters) => {
         const point: LngLat = [lng, lat];
         set((state) => {
           const last = state.route[state.route.length - 1];
           const delta = last ? haversineMiles(last, point) : 0;
+
+          let elevationGain = state.elevationGain;
+          let lastAltitudeFt = state.lastAltitudeFt;
+
+          if (
+            typeof altitudeMeters === "number" &&
+            Number.isFinite(altitudeMeters)
+          ) {
+            const altFt = altitudeMeters * METERS_TO_FEET;
+            if (state.lastAltitudeFt != null) {
+              const diff = altFt - state.lastAltitudeFt;
+              if (diff > 0) elevationGain += diff;
+            }
+            lastAltitudeFt = altFt;
+          }
+
           return {
             route: [...state.route, point],
             distance: state.distance + delta,
+            elevationGain,
+            lastAltitudeFt,
           };
         });
       },
@@ -66,6 +101,7 @@ export const useTripStore = create<TripState>()(
         route: state.route,
         distance: state.distance,
         isTracking: state.isTracking,
+        elevationGain: state.elevationGain,
       }),
     }
   )
