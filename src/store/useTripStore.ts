@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export type LngLat = [number, number];
 
@@ -25,32 +26,47 @@ function haversineMiles(a: LngLat, b: LngLat): number {
 
 type TripState = {
   isTracking: boolean;
+  /** Logged path as [lng, lat][] */
   route: LngLat[];
+  /** Total distance in miles */
   distance: number;
   toggleTracking: () => void;
   resetTrip: () => void;
   addPoint: (lng: number, lat: number) => void;
 };
 
-export const useTripStore = create<TripState>((set) => ({
-  isTracking: false,
-  route: [],
-  distance: 0,
-  toggleTracking: () => {
-    set((state) => ({ isTracking: !state.isTracking }));
-  },
-  resetTrip: () => {
-    set({ isTracking: false, route: [], distance: 0 });
-  },
-  addPoint: (lng, lat) => {
-    const point: LngLat = [lng, lat];
-    set((state) => {
-      const last = state.route[state.route.length - 1];
-      const delta = last ? haversineMiles(last, point) : 0;
-      return {
-        route: [...state.route, point],
-        distance: state.distance + delta,
-      };
-    });
-  },
-}));
+export const useTripStore = create<TripState>()(
+  persist(
+    (set) => ({
+      isTracking: false,
+      route: [],
+      distance: 0,
+      toggleTracking: () => {
+        set((state) => ({ isTracking: !state.isTracking }));
+      },
+      resetTrip: () => {
+        set({ isTracking: false, route: [], distance: 0 });
+      },
+      addPoint: (lng, lat) => {
+        const point: LngLat = [lng, lat];
+        set((state) => {
+          const last = state.route[state.route.length - 1];
+          const delta = last ? haversineMiles(last, point) : 0;
+          return {
+            route: [...state.route, point],
+            distance: state.distance + delta,
+          };
+        });
+      },
+    }),
+    {
+      name: "road-trip-trip",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        route: state.route,
+        distance: state.distance,
+        isTracking: state.isTracking,
+      }),
+    }
+  )
+);

@@ -44,14 +44,15 @@ export default function TripPage() {
           Export (Soon)
         </button>
 
-        <button
-          type="button"
-          onClick={resetTrip}
-          disabled={isTracking || route.length === 0}
-          className="col-span-2 rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-        >
-          Reset Trip
-        </button>
+        {!isTracking && route.length > 0 ? (
+          <button
+            type="button"
+            onClick={resetTrip}
+            className="col-span-2 rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          >
+            Reset
+          </button>
+        ) : null}
       </div>
     </section>
   );
