@@ -1,13 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import Map, { Layer, Source } from "react-map-gl/mapbox";
+import Map, { Layer, Source } from "react-map-gl/maplibre";
 
 import { useLocation } from "@/src/hooks/useLocation";
-import { mapboxAccessToken } from "@/src/lib/mapbox";
 import { useTripStore } from "@/src/store/useTripStore";
 
-import "mapbox-gl/dist/mapbox-gl.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+/** Free vector style (no API token). Carto basemap; OpenStreetMap contributors. */
+const MAP_STYLE =
+  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
 export default function TripMap() {
   useLocation();
@@ -30,8 +33,7 @@ export default function TripMap() {
   return (
     <div className="fixed inset-0 z-0">
       <Map
-        mapboxAccessToken={mapboxAccessToken}
-        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapStyle={MAP_STYLE}
         initialViewState={{
           longitude: -98.5,
           latitude: 39.8,
