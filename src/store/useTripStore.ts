@@ -27,6 +27,8 @@ type TripState = {
   isTracking: boolean;
   route: LngLat[];
   distance: number;
+  toggleTracking: () => void;
+  resetTrip: () => void;
   addPoint: (lng: number, lat: number) => void;
 };
 
@@ -34,6 +36,12 @@ export const useTripStore = create<TripState>((set) => ({
   isTracking: false,
   route: [],
   distance: 0,
+  toggleTracking: () => {
+    set((state) => ({ isTracking: !state.isTracking }));
+  },
+  resetTrip: () => {
+    set({ isTracking: false, route: [], distance: 0 });
+  },
   addPoint: (lng, lat) => {
     const point: LngLat = [lng, lat];
     set((state) => {

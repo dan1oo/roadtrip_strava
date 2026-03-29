@@ -16,7 +16,6 @@ export default function TripMap() {
   useLocation();
 
   const route = useTripStore((s) => s.route);
-  const isTracking = useTripStore((s) => s.isTracking);
 
   const lineFeature = useMemo(() => {
     if (route.length < 2) return null;
@@ -31,7 +30,7 @@ export default function TripMap() {
   }, [route]);
 
   return (
-    <div className="fixed inset-0 z-0">
+    <div className="h-full w-full">
       <Map
         mapStyle={MAP_STYLE}
         initialViewState={{
@@ -55,16 +54,6 @@ export default function TripMap() {
           </Source>
         ) : null}
       </Map>
-
-      <button
-        type="button"
-        onClick={() =>
-          useTripStore.setState((s) => ({ isTracking: !s.isTracking }))
-        }
-        className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 rounded-full bg-zinc-900 px-8 py-3 text-base font-semibold text-white shadow-lg ring-1 ring-white/10 transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:ring-black/10 dark:hover:bg-white"
-      >
-        {isTracking ? "Stop" : "Start"}
-      </button>
     </div>
   );
 }
