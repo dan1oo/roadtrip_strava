@@ -166,6 +166,15 @@ export const useTripStore = create<TripState>()(
     }),
     {
       name: "road-trip-trip",
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        const p = persisted as Partial<TripState> | null;
+        if (!p || typeof p !== "object") return persisted as TripState;
+        if (fromVersion >= 2) return p as TripState;
+        if (p.tripStatus != null) return p as TripState;
+        const tripStatus: TripStatus = p.isTracking ? "tracking" : "idle";
+        return { ...p, tripStatus } as TripState;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         tripStatus: state.tripStatus,

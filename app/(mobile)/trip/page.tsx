@@ -23,9 +23,20 @@ function formatDurationClock(ms: number): string {
 export default function TripPage() {
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
+  const [persistHydrated, setPersistHydrated] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "busy" | "error">(
     "idle"
   );
+
+  useEffect(() => {
+    if (useTripStore.persist.hasHydrated()) {
+      setPersistHydrated(true);
+      return;
+    }
+    return useTripStore.persist.onFinishHydration(() => {
+      setPersistHydrated(true);
+    });
+  }, []);
 
   const isTracking = useTripStore((s) => s.isTracking);
   const tripStatus = useTripStore((s) => s.tripStatus);
@@ -121,10 +132,10 @@ export default function TripPage() {
   }, [downloadPng]);
 
   return (
-    <section className="flex h-full flex-col">
-      <header className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <section className="flex h-full min-h-0 flex-col">
+      <header className="shrink-0 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <h1 className="text-lg font-semibold">Road Trip Tracker</h1>
-        {showStats ? (
+        {persistHydrated && showStats ? (
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -157,12 +168,17 @@ export default function TripPage() {
         ) : null}
       </header>
 
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <TripMapDynamic />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-        {tripStatus === "idle" ? (
+      <div className="grid shrink-0 grid-cols-1 gap-2 border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+        {!persistHydrated ? (
+          <p className="py-3 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            Loading trip…
+          </p>
+        ) : null}
+        {persistHydrated && tripStatus === "idle" ? (
           <button
             type="button"
             onClick={startTrip}
@@ -172,7 +188,7 @@ export default function TripPage() {
           </button>
         ) : null}
 
-        {tripStatus === "tracking" ? (
+        {persistHydrated && tripStatus === "tracking" ? (
           <>
             <button
               type="button"
@@ -198,7 +214,7 @@ export default function TripPage() {
           </>
         ) : null}
 
-        {tripStatus === "paused" ? (
+        {persistHydrated && tripStatus === "paused" ? (
           <>
             <button
               type="button"
@@ -224,7 +240,7 @@ export default function TripPage() {
           </>
         ) : null}
 
-        {canExport ? (
+        {persistHydrated && canExport ? (
           <>
             <button
               type="button"
