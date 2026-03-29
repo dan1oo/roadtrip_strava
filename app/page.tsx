@@ -1,5 +1,5 @@
-import TripMapDynamic from "@/src/components/TripMapDynamic";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <TripMapDynamic />;
+  redirect("/trip");
 }
