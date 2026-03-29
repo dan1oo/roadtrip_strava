@@ -50,6 +50,7 @@ export default function TripPage() {
   const endTrip = useTripStore((s) => s.endTrip);
   const addHighlight = useTripStore((s) => s.addHighlight);
   const resetTrip = useTripStore((s) => s.resetTrip);
+  const startNewTrip = useTripStore((s) => s.startNewTrip);
 
   const durationMs = useTripStore((s) => getTripDurationMs(s));
 
@@ -61,7 +62,7 @@ export default function TripPage() {
 
   const showStats =
     isTracking || route.length > 0 || distance > 0 || elevationGain > 0;
-  const canExport = tripStatus === "ended" && route.length > 0;
+  const showEndedActions = tripStatus === "ended";
 
   const handleEndTrip = useCallback(() => {
     if (window.confirm("Do you want to end trip?")) {
@@ -240,7 +241,7 @@ export default function TripPage() {
           </>
         ) : null}
 
-        {persistHydrated && canExport ? (
+        {persistHydrated && showEndedActions ? (
           <>
             <button
               type="button"
@@ -265,10 +266,17 @@ export default function TripPage() {
             ) : null}
             <button
               type="button"
+              onClick={startNewTrip}
+              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500"
+            >
+              Start new trip
+            </button>
+            <button
+              type="button"
               onClick={resetTrip}
               className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
             >
-              Reset
+              Clear trip
             </button>
           </>
         ) : null}
