@@ -46,7 +46,7 @@ export default function TripMap() {
   }, [highlights]);
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full min-h-0 w-full">
       <Map
         mapStyle={MAP_STYLE}
         initialViewState={{

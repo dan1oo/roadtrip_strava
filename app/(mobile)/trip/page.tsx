@@ -23,9 +23,20 @@ function formatDurationClock(ms: number): string {
 export default function TripPage() {
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [tick, setTick] = useState(0);
+  const [persistHydrated, setPersistHydrated] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "busy" | "error">(
     "idle"
   );
+
+  useEffect(() => {
+    if (useTripStore.persist.hasHydrated()) {
+      setPersistHydrated(true);
+      return;
+    }
+    return useTripStore.persist.onFinishHydration(() => {
+      setPersistHydrated(true);
+    });
+  }, []);
 
   const isTracking = useTripStore((s) => s.isTracking);
   const tripStatus = useTripStore((s) => s.tripStatus);
@@ -58,26 +69,73 @@ export default function TripPage() {
     }
   }, [endTrip]);
 
+  const downloadPng = useCallback((dataUrl: string, filename: string) => {
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = dataUrl;
+    link.click();
+  }, []);
+
   const handleExportPng = useCallback(async () => {
     if (!shareCardRef.current) return;
     setExportStatus("busy");
     try {
       const dataUrl = await captureShareCardAsPng(shareCardRef.current);
-      const link = document.createElement("a");
-      link.download = `road-strava-trip-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      downloadPng(dataUrl, `road-strava-trip-${Date.now()}.png`);
       setExportStatus("idle");
     } catch {
       setExportStatus("error");
     }
-  }, []);
+  }, [downloadPng]);
+
+  const handleShare = useCallback(async () => {
+    if (!shareCardRef.current || typeof navigator === "undefined") return;
+    setExportStatus("busy");
+    try {
+      const dataUrl = await captureShareCardAsPng(shareCardRef.current);
+      const filename = `road-strava-trip-${Date.now()}.png`;
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], filename, { type: "image/png" });
+
+      const sharePayload: ShareData = {
+        title: "Road Strava trip",
+        text: "My road trip story card",
+        files: [file],
+      };
+
+      const canShareFiles =
+        typeof navigator.share === "function" &&
+        (!navigator.canShare || navigator.canShare(sharePayload));
+
+      if (canShareFiles) {
+        try {
+          await navigator.share(sharePayload);
+          setExportStatus("idle");
+          return;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            setExportStatus("idle");
+            return;
+          }
+        }
+      }
+
+      downloadPng(dataUrl, filename);
+      setExportStatus("idle");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setExportStatus("idle");
+        return;
+      }
+      setExportStatus("error");
+    }
+  }, [downloadPng]);
 
   return (
-    <section className="flex h-full flex-col">
-      <header className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+    <section className="flex h-full min-h-0 flex-col">
+      <header className="shrink-0 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <h1 className="text-lg font-semibold">Road Trip Tracker</h1>
-        {showStats ? (
+        {persistHydrated && showStats ? (
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -110,12 +168,17 @@ export default function TripPage() {
         ) : null}
       </header>
 
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <TripMapDynamic />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 border-t border-zinc-200 p-3 dark:border-zinc-800">
-        {tripStatus === "idle" ? (
+      <div className="grid shrink-0 grid-cols-1 gap-2 border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+        {!persistHydrated ? (
+          <p className="py-3 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            Loading trip…
+          </p>
+        ) : null}
+        {persistHydrated && tripStatus === "idle" ? (
           <button
             type="button"
             onClick={startTrip}
@@ -125,7 +188,7 @@ export default function TripPage() {
           </button>
         ) : null}
 
-        {tripStatus === "tracking" ? (
+        {persistHydrated && tripStatus === "tracking" ? (
           <>
             <button
               type="button"
@@ -151,7 +214,7 @@ export default function TripPage() {
           </>
         ) : null}
 
-        {tripStatus === "paused" ? (
+        {persistHydrated && tripStatus === "paused" ? (
           <>
             <button
               type="button"
@@ -177,7 +240,7 @@ export default function TripPage() {
           </>
         ) : null}
 
-        {canExport ? (
+        {persistHydrated && canExport ? (
           <>
             <button
               type="button"
@@ -189,11 +252,11 @@ export default function TripPage() {
             </button>
             <button
               type="button"
-              onClick={handleExportPng}
+              onClick={handleShare}
               disabled={exportStatus === "busy"}
               className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
             >
-              Share
+              {exportStatus === "busy" ? "Sharing…" : "Share"}
             </button>
             {exportStatus === "error" ? (
               <p className="text-center text-xs text-red-500">
