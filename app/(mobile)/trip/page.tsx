@@ -58,20 +58,67 @@ export default function TripPage() {
     }
   }, [endTrip]);
 
+  const downloadPng = useCallback((dataUrl: string, filename: string) => {
+    const link = document.createElement("a");
+    link.download = filename;
+    link.href = dataUrl;
+    link.click();
+  }, []);
+
   const handleExportPng = useCallback(async () => {
     if (!shareCardRef.current) return;
     setExportStatus("busy");
     try {
       const dataUrl = await captureShareCardAsPng(shareCardRef.current);
-      const link = document.createElement("a");
-      link.download = `road-strava-trip-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      downloadPng(dataUrl, `road-strava-trip-${Date.now()}.png`);
       setExportStatus("idle");
     } catch {
       setExportStatus("error");
     }
-  }, []);
+  }, [downloadPng]);
+
+  const handleShare = useCallback(async () => {
+    if (!shareCardRef.current || typeof navigator === "undefined") return;
+    setExportStatus("busy");
+    try {
+      const dataUrl = await captureShareCardAsPng(shareCardRef.current);
+      const filename = `road-strava-trip-${Date.now()}.png`;
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], filename, { type: "image/png" });
+
+      const sharePayload: ShareData = {
+        title: "Road Strava trip",
+        text: "My road trip story card",
+        files: [file],
+      };
+
+      const canShareFiles =
+        typeof navigator.share === "function" &&
+        (!navigator.canShare || navigator.canShare(sharePayload));
+
+      if (canShareFiles) {
+        try {
+          await navigator.share(sharePayload);
+          setExportStatus("idle");
+          return;
+        } catch (err) {
+          if (err instanceof DOMException && err.name === "AbortError") {
+            setExportStatus("idle");
+            return;
+          }
+        }
+      }
+
+      downloadPng(dataUrl, filename);
+      setExportStatus("idle");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setExportStatus("idle");
+        return;
+      }
+      setExportStatus("error");
+    }
+  }, [downloadPng]);
 
   return (
     <section className="flex h-full flex-col">
@@ -189,11 +236,11 @@ export default function TripPage() {
             </button>
             <button
               type="button"
-              onClick={handleExportPng}
+              onClick={handleShare}
               disabled={exportStatus === "busy"}
               className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
             >
-              Share
+              {exportStatus === "busy" ? "Sharing…" : "Share"}
             </button>
             {exportStatus === "error" ? (
               <p className="text-center text-xs text-red-500">
