@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 export type LngLat = [number, number];
+export type TripStatus = "idle" | "tracking" | "paused" | "ended";
 
 const EARTH_RADIUS_MILES = 3958.8;
 const METERS_TO_FEET = 3.28084;
@@ -26,9 +27,14 @@ function haversineMiles(a: LngLat, b: LngLat): number {
 }
 
 type TripState = {
+  tripStatus: TripStatus;
   isTracking: boolean;
   /** Logged path as [lng, lat][] */
   route: LngLat[];
+  /** Highlight markers captured during the trip */
+  highlights: LngLat[];
+  /** Most recent tracked point */
+  lastPoint: LngLat | null;
   /** Total distance in miles */
   distance: number;
   /** Cumulative elevation gain in feet (from GPS altitude when available) */
@@ -39,7 +45,11 @@ type TripState = {
   trackingStartedAt: number | null;
   /** Completed tracking time in ms (sums each Start→Stop segment until reset) */
   accumulatedTrackingMs: number;
-  toggleTracking: () => void;
+  startTrip: () => void;
+  pauseTrip: () => void;
+  resumeTrip: () => void;
+  endTrip: () => void;
+  addHighlight: () => void;
   resetTrip: () => void;
   addPoint: (
     lng: number,
@@ -51,34 +61,71 @@ type TripState = {
 export const useTripStore = create<TripState>()(
   persist(
     (set) => ({
+      tripStatus: "idle",
       isTracking: false,
       route: [],
+      highlights: [],
+      lastPoint: null,
       distance: 0,
       elevationGain: 0,
       lastAltitudeFt: null,
       trackingStartedAt: null,
       accumulatedTrackingMs: 0,
-      toggleTracking: () => {
+      startTrip: () => {
+        set({
+          tripStatus: "tracking",
+          isTracking: true,
+          trackingStartedAt: Date.now(),
+        });
+      },
+      pauseTrip: () => {
         set((state) => {
-          if (!state.isTracking) {
-            return {
-              isTracking: true,
-              trackingStartedAt: Date.now(),
-            };
-          }
+          if (!state.isTracking) return {};
           const start = state.trackingStartedAt;
           const delta = start ? Date.now() - start : 0;
           return {
+            tripStatus: "paused",
             isTracking: false,
             trackingStartedAt: null,
             accumulatedTrackingMs: state.accumulatedTrackingMs + delta,
           };
         });
       },
+      resumeTrip: () => {
+        set((state) => {
+          if (state.tripStatus !== "paused") return {};
+          return {
+            tripStatus: "tracking",
+            isTracking: true,
+            trackingStartedAt: Date.now(),
+          };
+        });
+      },
+      endTrip: () => {
+        set((state) => {
+          const start = state.trackingStartedAt;
+          const delta = state.isTracking && start ? Date.now() - start : 0;
+          return {
+            tripStatus: "ended",
+            isTracking: false,
+            trackingStartedAt: null,
+            accumulatedTrackingMs: state.accumulatedTrackingMs + delta,
+          };
+        });
+      },
+      addHighlight: () => {
+        set((state) => {
+          if (!state.lastPoint) return {};
+          return { highlights: [...state.highlights, state.lastPoint] };
+        });
+      },
       resetTrip: () => {
         set({
+          tripStatus: "idle",
           isTracking: false,
           route: [],
+          highlights: [],
+          lastPoint: null,
           distance: 0,
           elevationGain: 0,
           lastAltitudeFt: null,
@@ -109,6 +156,7 @@ export const useTripStore = create<TripState>()(
 
           return {
             route: [...state.route, point],
+            lastPoint: point,
             distance: state.distance + delta,
             elevationGain,
             lastAltitudeFt,
@@ -120,7 +168,9 @@ export const useTripStore = create<TripState>()(
       name: "road-trip-trip",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        tripStatus: state.tripStatus,
         route: state.route,
+        highlights: state.highlights,
         distance: state.distance,
         isTracking: state.isTracking,
         elevationGain: state.elevationGain,

@@ -16,6 +16,7 @@ export default function TripMap() {
   useLocation();
 
   const route = useTripStore((s) => s.route);
+  const highlights = useTripStore((s) => s.highlights);
 
   const lineFeature = useMemo(() => {
     if (route.length < 2) return null;
@@ -28,6 +29,21 @@ export default function TripMap() {
       },
     };
   }, [route]);
+
+  const highlightFeatureCollection = useMemo(() => {
+    if (highlights.length === 0) return null;
+    return {
+      type: "FeatureCollection" as const,
+      features: highlights.map((point) => ({
+        type: "Feature" as const,
+        properties: {},
+        geometry: {
+          type: "Point" as const,
+          coordinates: point,
+        },
+      })),
+    };
+  }, [highlights]);
 
   return (
     <div className="h-full w-full">
@@ -49,6 +65,20 @@ export default function TripMap() {
                 "line-color": "#2563eb",
                 "line-width": 5,
                 "line-opacity": 0.95,
+              }}
+            />
+          </Source>
+        ) : null}
+        {highlightFeatureCollection ? (
+          <Source id="trip-highlights" type="geojson" data={highlightFeatureCollection}>
+            <Layer
+              id="trip-highlights-dots"
+              type="circle"
+              paint={{
+                "circle-radius": 6,
+                "circle-color": "#f97316",
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
               }}
             />
           </Source>

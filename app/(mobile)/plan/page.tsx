@@ -180,12 +180,12 @@ export default function PlanPage() {
               ))}
             </ul>
           ) : null}
-          {loadingSearch === "start" && debouncedStart.length >= 2 ? (
+          {startSearchLoading && debouncedStart.length >= 2 ? (
             <p className="mt-1 text-xs text-zinc-500">Searching…</p>
           ) : null}
         </div>
 
-        <div className="relative" ref={endRef}>
+        <div className="relative">
           <label className="block text-sm font-medium">
             End
             <input
