@@ -17,6 +17,7 @@ export default function TripMap() {
 
   const route = useTripStore((s) => s.route);
   const highlights = useTripStore((s) => s.highlights);
+  const liveUserPosition = useTripStore((s) => s.liveUserPosition);
 
   const lineFeature = useMemo(() => {
     if (route.length < 2) return null;
@@ -44,6 +45,18 @@ export default function TripMap() {
       })),
     };
   }, [highlights]);
+
+  const userLocationFeature = useMemo(() => {
+    if (!liveUserPosition) return null;
+    return {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "Point" as const,
+        coordinates: liveUserPosition,
+      },
+    };
+  }, [liveUserPosition]);
 
   return (
     <div className="h-full min-h-0 w-full">
@@ -77,6 +90,29 @@ export default function TripMap() {
               paint={{
                 "circle-radius": 6,
                 "circle-color": "#f97316",
+                "circle-stroke-color": "#ffffff",
+                "circle-stroke-width": 2,
+              }}
+            />
+          </Source>
+        ) : null}
+        {userLocationFeature ? (
+          <Source id="user-location" type="geojson" data={userLocationFeature}>
+            <Layer
+              id="user-location-halo"
+              type="circle"
+              paint={{
+                "circle-radius": 14,
+                "circle-color": "#0ea5e9",
+                "circle-opacity": 0.25,
+              }}
+            />
+            <Layer
+              id="user-location-dot"
+              type="circle"
+              paint={{
+                "circle-radius": 7,
+                "circle-color": "#0284c7",
                 "circle-stroke-color": "#ffffff",
                 "circle-stroke-width": 2,
               }}

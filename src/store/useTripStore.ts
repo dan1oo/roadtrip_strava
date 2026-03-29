@@ -35,6 +35,8 @@ type TripState = {
   highlights: LngLat[];
   /** Most recent tracked point */
   lastPoint: LngLat | null;
+  /** Latest GPS fix for map “you are here” (session; not persisted) */
+  liveUserPosition: LngLat | null;
   /** Total distance in miles */
   distance: number;
   /** Cumulative elevation gain in feet (from GPS altitude when available) */
@@ -58,6 +60,7 @@ type TripState = {
     lat: number,
     altitudeMeters?: number | null
   ) => void;
+  setLiveUserPosition: (position: LngLat | null) => void;
 };
 
 export const useTripStore = create<TripState>()(
@@ -68,6 +71,7 @@ export const useTripStore = create<TripState>()(
       route: [],
       highlights: [],
       lastPoint: null,
+      liveUserPosition: null,
       distance: 0,
       elevationGain: 0,
       lastAltitudeFt: null,
@@ -128,6 +132,7 @@ export const useTripStore = create<TripState>()(
           route: [],
           highlights: [],
           lastPoint: null,
+          liveUserPosition: null,
           distance: 0,
           elevationGain: 0,
           lastAltitudeFt: null,
@@ -142,6 +147,7 @@ export const useTripStore = create<TripState>()(
           route: [],
           highlights: [],
           lastPoint: null,
+          liveUserPosition: null,
           distance: 0,
           elevationGain: 0,
           lastAltitudeFt: null,
@@ -149,6 +155,7 @@ export const useTripStore = create<TripState>()(
           accumulatedTrackingMs: 0,
         });
       },
+      setLiveUserPosition: (position) => set({ liveUserPosition: position }),
       addPoint: (lng, lat, altitudeMeters) => {
         const point: LngLat = [lng, lat];
         set((state) => {
