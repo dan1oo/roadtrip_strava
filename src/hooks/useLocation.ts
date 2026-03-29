@@ -13,8 +13,8 @@ export function useLocation(): void {
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        const { longitude, latitude } = position.coords;
-        addPoint(longitude, latitude);
+        const { longitude, latitude, altitude } = position.coords;
+        addPoint(longitude, latitude, altitude ?? null);
       },
       undefined,
       { enableHighAccuracy: true }
