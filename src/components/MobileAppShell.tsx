@@ -10,8 +10,9 @@ type TabItem = {
 };
 
 const tabs: TabItem[] = [
-  { href: "/trip", label: "Track", icon: "TR" },
   { href: "/plan", label: "Plan", icon: "PL" },
+  { href: "/trip", label: "Track", icon: "TR" },
+  { href: "/past", label: "Past", icon: "PA" },
 ];
 
 export default function MobileAppShell({
@@ -27,7 +28,7 @@ export default function MobileAppShell({
         <main className="h-full min-h-0 overflow-y-auto pb-24">{children}</main>
 
         <nav className="absolute inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 px-3 py-2 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
-          <ul className="grid grid-cols-2 gap-2">
+          <ul className="grid grid-cols-3 gap-2">
             {tabs.map((tab) => {
               const active = pathname === tab.href;
 
