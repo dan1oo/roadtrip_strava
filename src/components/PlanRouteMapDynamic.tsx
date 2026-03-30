@@ -7,7 +7,7 @@ import type { PlanRouteMapProps } from "@/src/components/PlanRouteMap";
 const PlanRouteMap = dynamic(() => import("@/src/components/PlanRouteMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-[min(52vh,420px)] min-h-[240px] w-full items-center justify-center rounded-2xl border border-zinc-700/50 bg-zinc-900/80 text-sm text-zinc-400">
+    <div className="flex h-[min(280px,42dvh)] w-full shrink-0 items-center justify-center rounded-2xl border border-zinc-700/50 bg-zinc-900/80 text-sm text-zinc-400 sm:h-[300px]">
       Loading map…
     </div>
   ),
