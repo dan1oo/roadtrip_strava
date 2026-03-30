@@ -296,7 +296,7 @@ export default function PlanPage() {
       </div>
 
       {hasRoute && startCoord && endCoord ? (
-        <div className="flex min-h-0 flex-col gap-3">
+        <div className="flex shrink-0 flex-col gap-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
               Route preview
@@ -313,7 +313,7 @@ export default function PlanPage() {
             endCoord={endCoord}
             highlights={highlights}
           />
-          <div className="flex flex-wrap gap-2 text-[11px] font-medium">
+          <div className="relative z-[1] flex flex-wrap gap-2 bg-white pt-1 text-[11px] font-medium dark:bg-zinc-900">
             <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-emerald-800 ring-1 ring-emerald-500/25 dark:text-emerald-300">
               ● Scenery
             </span>
@@ -328,14 +328,14 @@ export default function PlanPage() {
       ) : null}
 
       {!highlightsLoading && hasRoute && highlights.length === 0 ? (
-        <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="relative z-[1] bg-white px-1 text-center text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
           No named highlights returned for this corridor (try a longer or more
           urban route, or check back later — external map APIs can rate-limit).
         </p>
       ) : null}
 
       {highlights.length > 0 ? (
-        <div className="space-y-3">
+        <div className="relative z-[1] space-y-3 bg-white dark:bg-zinc-900">
           <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Along the way
           </h2>
@@ -367,7 +367,7 @@ export default function PlanPage() {
       ) : null}
 
       {miles != null && eta != null && sceneryScore != null ? (
-        <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50 via-white to-violet-50/80 p-4 shadow-md dark:border-indigo-900/60 dark:from-indigo-950/50 dark:via-zinc-900 dark:to-violet-950/30">
+        <div className="relative z-[1] rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50 via-white to-violet-50/80 p-4 shadow-md dark:border-indigo-900/60 dark:from-indigo-950/50 dark:via-zinc-900 dark:to-violet-950/30">
           <h2 className="text-sm font-bold uppercase tracking-wide text-indigo-800 dark:text-indigo-200">
             Trip summary
           </h2>

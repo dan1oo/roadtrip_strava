@@ -77,7 +77,10 @@ export default function PlanRouteMap({
   const [eLng, eLat] = endCoord;
 
   return (
-    <div className="relative h-[min(52vh,420px)] min-h-[240px] w-full overflow-hidden rounded-2xl border border-zinc-700/80 shadow-xl ring-1 ring-white/10">
+    <div
+      className="relative isolate z-0 h-[min(280px,42dvh)] w-full shrink-0 overflow-hidden rounded-2xl border border-zinc-700/80 shadow-xl ring-1 ring-white/10 sm:h-[300px]"
+      style={{ contain: "layout paint" }}
+    >
       <Map
         ref={mapRef}
         mapStyle={MAP_STYLE}
@@ -86,7 +89,7 @@ export default function PlanRouteMap({
           latitude: (sLat + eLat) / 2,
           zoom: 6,
         }}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", position: "relative" }}
         onLoad={fitRoute}
       >
         {lineFeature ? (
