@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import ShareCard, {
-  captureShareCardAsPng,
-} from "@/src/components/ShareCard";
+import ShareCard, { captureShareCardAsPng } from "@/src/components/ShareCard";
 import TripMapDynamic from "@/src/components/TripMapDynamic";
 import {
   getTripDurationMs,
@@ -49,7 +47,6 @@ export default function TripPage() {
   const resumeTrip = useTripStore((s) => s.resumeTrip);
   const endTrip = useTripStore((s) => s.endTrip);
   const addHighlight = useTripStore((s) => s.addHighlight);
-  const resetTrip = useTripStore((s) => s.resetTrip);
   const startNewTrip = useTripStore((s) => s.startNewTrip);
 
   const durationMs = useTripStore((s) => getTripDurationMs(s));
@@ -76,18 +73,6 @@ export default function TripPage() {
     link.href = dataUrl;
     link.click();
   }, []);
-
-  const handleExportPng = useCallback(async () => {
-    if (!shareCardRef.current) return;
-    setExportStatus("busy");
-    try {
-      const dataUrl = await captureShareCardAsPng(shareCardRef.current);
-      downloadPng(dataUrl, `road-strava-trip-${Date.now()}.png`);
-      setExportStatus("idle");
-    } catch {
-      setExportStatus("error");
-    }
-  }, [downloadPng]);
 
   const handleShare = useCallback(async () => {
     if (!shareCardRef.current || typeof navigator === "undefined") return;
@@ -245,17 +230,9 @@ export default function TripPage() {
           <>
             <button
               type="button"
-              onClick={handleExportPng}
-              disabled={exportStatus === "busy"}
-              className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
-            >
-              {exportStatus === "busy" ? "Exporting…" : "Export story PNG"}
-            </button>
-            <button
-              type="button"
               onClick={handleShare}
               disabled={exportStatus === "busy"}
-              className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
+              className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
             >
               {exportStatus === "busy" ? "Sharing…" : "Share"}
             </button>
@@ -267,16 +244,9 @@ export default function TripPage() {
             <button
               type="button"
               onClick={startNewTrip}
-              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500"
+              className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30"
             >
               Start new trip
-            </button>
-            <button
-              type="button"
-              onClick={resetTrip}
-              className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              Clear trip
             </button>
           </>
         ) : null}

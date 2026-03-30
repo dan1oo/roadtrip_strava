@@ -3,6 +3,15 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 export type LngLat = [number, number];
 export type TripStatus = "idle" | "tracking" | "paused" | "ended";
+export type PastTrip = {
+  id: string;
+  endedAt: number;
+  distance: number;
+  elevationGain: number;
+  durationMs: number;
+  route: LngLat[];
+  highlights: LngLat[];
+};
 
 const EARTH_RADIUS_MILES = 3958.8;
 const METERS_TO_FEET = 3.28084;
@@ -47,6 +56,8 @@ type TripState = {
   trackingStartedAt: number | null;
   /** Completed tracking time in ms (sums each Start→Stop segment until reset) */
   accumulatedTrackingMs: number;
+  /** Completed trip snapshots for history tab (persisted). */
+  pastTrips: PastTrip[];
   startTrip: () => void;
   pauseTrip: () => void;
   resumeTrip: () => void;
@@ -61,6 +72,7 @@ type TripState = {
     altitudeMeters?: number | null
   ) => void;
   setLiveUserPosition: (position: LngLat | null) => void;
+  clearPastTrips: () => void;
 };
 
 export const useTripStore = create<TripState>()(
@@ -77,6 +89,7 @@ export const useTripStore = create<TripState>()(
       lastAltitudeFt: null,
       trackingStartedAt: null,
       accumulatedTrackingMs: 0,
+      pastTrips: [],
       startTrip: () => {
         set({
           tripStatus: "tracking",
@@ -111,11 +124,33 @@ export const useTripStore = create<TripState>()(
         set((state) => {
           const start = state.trackingStartedAt;
           const delta = state.isTracking && start ? Date.now() - start : 0;
+          const durationMs = state.accumulatedTrackingMs + delta;
+          const hasTripData =
+            state.route.length > 0 ||
+            state.highlights.length > 0 ||
+            state.distance > 0 ||
+            state.elevationGain > 0 ||
+            durationMs > 0;
+          const pastTrips = hasTripData
+            ? [
+                {
+                  id: `${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                  endedAt: Date.now(),
+                  distance: state.distance,
+                  elevationGain: state.elevationGain,
+                  durationMs,
+                  route: state.route,
+                  highlights: state.highlights,
+                },
+                ...state.pastTrips,
+              ].slice(0, 100)
+            : state.pastTrips;
           return {
             tripStatus: "ended",
             isTracking: false,
             trackingStartedAt: null,
-            accumulatedTrackingMs: state.accumulatedTrackingMs + delta,
+            accumulatedTrackingMs: durationMs,
+            pastTrips,
           };
         });
       },
@@ -156,6 +191,7 @@ export const useTripStore = create<TripState>()(
         });
       },
       setLiveUserPosition: (position) => set({ liveUserPosition: position }),
+      clearPastTrips: () => set({ pastTrips: [] }),
       addPoint: (lng, lat, altitudeMeters) => {
         const point: LngLat = [lng, lat];
         set((state) => {
@@ -189,14 +225,17 @@ export const useTripStore = create<TripState>()(
     }),
     {
       name: "road-trip-trip",
-      version: 2,
+      version: 3,
       migrate: (persisted, fromVersion) => {
         const p = persisted as Partial<TripState> | null;
         if (!p || typeof p !== "object") return persisted as TripState;
-        if (fromVersion >= 2) return p as TripState;
+        if (fromVersion >= 3) return p as TripState;
+        if (fromVersion === 2) {
+          return { ...p, pastTrips: [] } as TripState;
+        }
         if (p.tripStatus != null) return p as TripState;
         const tripStatus: TripStatus = p.isTracking ? "tracking" : "idle";
-        return { ...p, tripStatus } as TripState;
+        return { ...p, tripStatus, pastTrips: [] } as TripState;
       },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
@@ -207,6 +246,7 @@ export const useTripStore = create<TripState>()(
         isTracking: state.isTracking,
         elevationGain: state.elevationGain,
         accumulatedTrackingMs: state.accumulatedTrackingMs,
+        pastTrips: state.pastTrips,
       }),
     }
   )
