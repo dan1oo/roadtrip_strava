@@ -58,6 +58,8 @@ type TripState = {
   accumulatedTrackingMs: number;
   /** Completed trip snapshots for history tab (persisted). */
   pastTrips: PastTrip[];
+  /** True when a new trip was saved and not yet opened in Past Trips tab. */
+  hasUnseenPastTrips: boolean;
   startTrip: () => void;
   pauseTrip: () => void;
   resumeTrip: () => void;
@@ -73,6 +75,8 @@ type TripState = {
   ) => void;
   setLiveUserPosition: (position: LngLat | null) => void;
   clearPastTrips: () => void;
+  markPastTripsSeen: () => void;
+  loadPastTrip: (tripId: string) => void;
 };
 
 export const useTripStore = create<TripState>()(
@@ -90,6 +94,7 @@ export const useTripStore = create<TripState>()(
       trackingStartedAt: null,
       accumulatedTrackingMs: 0,
       pastTrips: [],
+      hasUnseenPastTrips: false,
       startTrip: () => {
         set({
           tripStatus: "tracking",
@@ -151,6 +156,7 @@ export const useTripStore = create<TripState>()(
             trackingStartedAt: null,
             accumulatedTrackingMs: durationMs,
             pastTrips,
+            hasUnseenPastTrips: hasTripData ? true : state.hasUnseenPastTrips,
           };
         });
       },
@@ -191,7 +197,26 @@ export const useTripStore = create<TripState>()(
         });
       },
       setLiveUserPosition: (position) => set({ liveUserPosition: position }),
-      clearPastTrips: () => set({ pastTrips: [] }),
+      clearPastTrips: () => set({ pastTrips: [], hasUnseenPastTrips: false }),
+      markPastTripsSeen: () => set({ hasUnseenPastTrips: false }),
+      loadPastTrip: (tripId) => {
+        set((state) => {
+          const trip = state.pastTrips.find((t) => t.id === tripId);
+          if (!trip) return {};
+          return {
+            tripStatus: "ended",
+            isTracking: false,
+            route: trip.route,
+            highlights: trip.highlights,
+            lastPoint: trip.route[trip.route.length - 1] ?? null,
+            distance: trip.distance,
+            elevationGain: trip.elevationGain,
+            lastAltitudeFt: null,
+            trackingStartedAt: null,
+            accumulatedTrackingMs: trip.durationMs,
+          };
+        });
+      },
       addPoint: (lng, lat, altitudeMeters) => {
         const point: LngLat = [lng, lat];
         set((state) => {
@@ -225,17 +250,29 @@ export const useTripStore = create<TripState>()(
     }),
     {
       name: "road-trip-trip",
-      version: 3,
+      version: 4,
       migrate: (persisted, fromVersion) => {
         const p = persisted as Partial<TripState> | null;
         if (!p || typeof p !== "object") return persisted as TripState;
-        if (fromVersion >= 3) return p as TripState;
+        if (fromVersion >= 4) return p as TripState;
+        if (fromVersion === 3) {
+          return { ...p, hasUnseenPastTrips: false } as TripState;
+        }
         if (fromVersion === 2) {
-          return { ...p, pastTrips: [] } as TripState;
+          return {
+            ...p,
+            pastTrips: [],
+            hasUnseenPastTrips: false,
+          } as TripState;
         }
         if (p.tripStatus != null) return p as TripState;
         const tripStatus: TripStatus = p.isTracking ? "tracking" : "idle";
-        return { ...p, tripStatus, pastTrips: [] } as TripState;
+        return {
+          ...p,
+          tripStatus,
+          pastTrips: [],
+          hasUnseenPastTrips: false,
+        } as TripState;
       },
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
@@ -247,6 +284,7 @@ export const useTripStore = create<TripState>()(
         elevationGain: state.elevationGain,
         accumulatedTrackingMs: state.accumulatedTrackingMs,
         pastTrips: state.pastTrips,
+        hasUnseenPastTrips: state.hasUnseenPastTrips,
       }),
     }
   )

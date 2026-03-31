@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useTripStore } from "@/src/store/useTripStore";
+
 type TabItem = {
   href: string;
   label: string;
@@ -21,6 +23,7 @@ export default function MobileAppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const hasUnseenPastTrips = useTripStore((s) => s.hasUnseenPastTrips);
 
   return (
     <div className="min-h-dvh bg-zinc-200/70 p-3 dark:bg-zinc-950">
@@ -44,6 +47,12 @@ export default function MobileAppShell({
                   >
                     <span aria-hidden>{tab.icon}</span>
                     <span>{tab.label}</span>
+                    {tab.href === "/past" && hasUnseenPastTrips ? (
+                      <span
+                        aria-label="New saved trip"
+                        className="ml-1 inline-block h-2 w-2 rounded-full bg-emerald-500"
+                      />
+                    ) : null}
                   </Link>
                 </li>
               );
