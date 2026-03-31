@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import { useTripStore, type PastTrip } from "@/src/store/useTripStore";
 
@@ -23,7 +24,13 @@ function formatEndedAt(ts: number): string {
   });
 }
 
-function PastTripCard({ trip }: { trip: PastTrip }) {
+function PastTripCard({
+  trip,
+  onLoad,
+}: {
+  trip: PastTrip;
+  onLoad: (tripId: string) => void;
+}) {
   return (
     <li className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -54,15 +61,33 @@ function PastTripCard({ trip }: { trip: PastTrip }) {
       <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
         {trip.route.length.toLocaleString()} GPS points, {trip.highlights.length} highlights
       </p>
+      <button
+        type="button"
+        onClick={() => onLoad(trip.id)}
+        className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+      >
+        Open in recorder
+      </button>
     </li>
   );
 }
 
 export default function PastTripsPage() {
+  const router = useRouter();
   const pastTrips = useTripStore((s) => s.pastTrips);
   const clearPastTrips = useTripStore((s) => s.clearPastTrips);
+  const markPastTripsSeen = useTripStore((s) => s.markPastTripsSeen);
+  const loadPastTrip = useTripStore((s) => s.loadPastTrip);
 
   const hasTrips = useMemo(() => pastTrips.length > 0, [pastTrips.length]);
+  useEffect(() => {
+    markPastTripsSeen();
+  }, [markPastTripsSeen]);
+
+  const handleLoadTrip = (tripId: string) => {
+    loadPastTrip(tripId);
+    router.push("/trip");
+  };
 
   return (
     <section className="flex h-full min-h-0 flex-col">
@@ -89,7 +114,7 @@ export default function PastTripsPage() {
             </div>
             <ul className="space-y-3">
               {pastTrips.map((trip) => (
-                <PastTripCard key={trip.id} trip={trip} />
+                <PastTripCard key={trip.id} trip={trip} onLoad={handleLoadTrip} />
               ))}
             </ul>
           </>
